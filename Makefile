@@ -150,6 +150,8 @@ UPROGS=\
 	_usertests\
 	_wc\
 	_zombie\
+  _dedup_writer\
+  _dedup_reader\
 #
 
 fs.img: mkfs README $(UPROGS)
