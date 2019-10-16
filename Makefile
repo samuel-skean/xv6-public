@@ -152,6 +152,7 @@ UPROGS=\
 	_zombie\
   _dedup_writer\
   _dedup_reader\
+  _cow_fork\
 #
 
 fs.img: mkfs README $(UPROGS)
