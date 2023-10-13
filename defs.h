@@ -73,7 +73,7 @@ void            ioapicinit(void);
 char*           kalloc(void);
 void            kfree(char*);
 void            kinit1(void*, void*);
-void            kinit2(void*, void*);
+void            kinit2();
 void            krelease(char*);
 void            kretain(char*);
 int             krefcount(char*);
