@@ -2,7 +2,9 @@
 #include "assert.h"
 #include "types.h"
 
-uint64 current_timestamp(void) {
+uint64 
+current_timestamp(void)
+{
     uint32 highOrder, lowOrder;
     asm ("rdtscp"
     // outputs to these registers, which are these variables:
@@ -16,15 +18,16 @@ uint64 current_timestamp(void) {
     return (((uint64) highOrder) << 32) | lowOrder;
 }
 
-int main(int argc, char *argv[])
+int
+main(int argc, char *argv[])
 {
     if (argc == 1) {
         printf(1, "Usage: time program args...\n");
         exit();
     }
 
-    char* program = argv[1];
-    char** program_argv = argv + 1;
+    char *program = argv[1];
+    char **program_argv = argv + 1;
 
     uint64 start = current_timestamp();
 
