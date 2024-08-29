@@ -16,7 +16,7 @@ int main(int argc, char *argv[])
     } else {
         // In the parent.
         if (wait() == -1) {
-            printf(2, "But we just *had* kids!\n");
+            printf(2, "I just spawned a process, but apparently I have no kids. Why?\n");
             exit();
         }
         printf(1, "The child finished.\n");
