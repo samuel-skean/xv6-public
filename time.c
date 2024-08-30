@@ -2,7 +2,9 @@
 #include "assert.h"
 #include "types.h"
 
-uint64 
+// Doesn't handle times bigger than 2^31 - 1 because I don't feel like writing a
+// new format specifier for printf at the moment.
+int
 current_timestamp(void)
 {
     uint32 highOrder, lowOrder;
@@ -15,7 +17,7 @@ current_timestamp(void)
         :
     );
     
-    return (((uint64) highOrder) << 32) | lowOrder;
+    return lowOrder;
 }
 
 int
