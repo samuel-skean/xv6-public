@@ -2,7 +2,9 @@
 #include "assert.h"
 #include "types.h"
 
-uint64 
+// Doesn't handle times bigger than 2^31 - 1 because I don't feel like writing a
+// new format specifier for printf at the moment.
+uint64
 current_timestamp(void)
 {
     uint32 highOrder, lowOrder;
@@ -43,7 +45,7 @@ main(int argc, char *argv[])
             exit();
         }
         uint64 end = current_timestamp();
-        printf(1, "%s took %d cycles to run.\n", program, end - start);
+        printf(1, "%s took %ud cycles to run.\n", program, end - start);
     }
     exit();
 }

@@ -49,6 +49,22 @@ print_d(int fd, int v)
   while (--i >= 0)
     putc(fd, buf[i]);
 }
+
+  static void print_ul(int fd, uint64 v)
+{
+  char buf[32];
+  uint64 x = v;
+
+  int i = 0;
+  do {
+    buf[i++] = digits[x % 10];
+    x /= 10;
+  } while (x != 0);
+
+  while (--i >= 0)
+    putc(fd, buf[i]);
+}
+
 // Print to the given fd. Only understands %d, %x, %p, %s.
   void
 printf(int fd, char *fmt, ...)
@@ -58,6 +74,8 @@ printf(int fd, char *fmt, ...)
   char *s;
 
   va_start(ap, fmt);
+  unsigned char un_signed = 0;
+
   for (i = 0; (c = fmt[i] & 0xff) != 0; i++) {
     if (c != '%') {
       putc(fd, c);
@@ -68,18 +86,48 @@ printf(int fd, char *fmt, ...)
       break;
     switch(c) {
     case 'c':
-      putc(fd, va_arg(ap, int));
+      if (un_signed) {
+        write(fd, "%uc not supported.\n", 19);
+      } else {
+        putc(fd, va_arg(ap, int));
+      }
       break;
     case 'd':
-      print_d(fd, va_arg(ap, int));
+      if (un_signed) {
+        write(fd, "\n%ud not supported.\n", 20);
+      } else {
+        print_d(fd, va_arg(ap, int));
+      }
+      break;
+    case 'u':
+      un_signed = 1;
+      continue;
+    case 'l':
+      if (un_signed) {
+        print_ul(fd, va_arg(ap, uint64));
+      } else {
+        write(fd, "\n%l not supported.\n", 19);
+      }
       break;
     case 'x':
-      print_x32(fd, va_arg(ap, uint));
+      if (un_signed) {
+        write(fd, "\n%ux not supported.\n", 20);
+      } else {
+        print_x32(fd, va_arg(ap, uint));
+      }
       break;
     case 'p':
-      print_x64(fd, va_arg(ap, addr_t));
+      if (un_signed) {
+        write(fd, "\n%up not supported.\n", 20);
+      } else {
+        print_x64(fd, va_arg(ap, addr_t));
+      }
       break;
     case 's':
+      if (un_signed) {
+        write(fd, "\n%us not supported.\n", 20);
+        continue;
+      }
       if ((s = va_arg(ap, char*)) == 0)
         s = "(null)";
       while (*s)
@@ -94,5 +142,6 @@ printf(int fd, char *fmt, ...)
       putc(fd, c);
       break;
     }
+    un_signed = 0;
   }
 }
