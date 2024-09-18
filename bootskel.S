@@ -2,7 +2,7 @@
 .globl start
 start:
 movb $0x0e, %ah
-movb hello, %al  # what is moved into %al ?
+movb hello, %al  # what is moved into %al ? A: The character H.
 movb $0,    %bh
 movb $7,    %bl
 int $0x10

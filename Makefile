@@ -228,4 +228,17 @@ bootskel.img: bootskel.S
 	$(LD) -Ttext=0x7c00 -e start bootskel.o -o bootskellinked.o
 	$(OBJCOPY) -O binary bootskellinked.o bootskel.img
 
+bootsplash.img: bootsplash.S
+	$(AS) bootsplash.S -o bootsplash.o
+	$(LD) -Ttext=0x7c00 -e start bootsplash.o -o bootsplashlinked.o
+	$(OBJCOPY) -O binary bootsplashlinked.o bootsplash.img
+	dd if=cover.raw of=bootsplash.img bs=512 seek=1 # seek is in terms of block sizes
+
+qemu-bootsplash: bootsplash.img
+	$(QEMU) bootsplash.img
+
+qemu-bootsplash-gdb: bootsplash.img
+	@echo "*** Now run 'gdb'." 1>&2
+	$(QEMU) bootsplash.img -S $(QEMUGDB)
+	
 .PHONY: dist-test dist
