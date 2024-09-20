@@ -8,6 +8,7 @@ mov %ax, %ds
 mov %ax, %es
 mov %ax, %ss
 
+movb %dl, 0x10 # Save the boot drive number.
 
 # get cursor position into %dh and %dl
 movb $0x03, %ah
@@ -31,12 +32,13 @@ movb $0x0, %ah
 movb $0x13, %al
 int $0x10
 
-# Put a white pixel on the screen:
-movw $0xa000, %ax  # How many 0s should it have? A: 3, because it will be multiplied by 16
-movw %ax, %ds  # In i8086 you cannot move imm directly to a *s register.
-movb $0xf, %al # A white pixel
-movw $0x7da0, %di   # The first pixel at the top-left corner of the screen
-movb %al, %ds:(%di) # After this instruction you can see the tiny white dot there. (maximize window to make it more visible)
+movb 0x10, %dl # Load the boot drive number.
+
+# Reading from disk:
+movb $0x42, %ah
+# %dl already holds the boot drive number
+movw $dap, %si # Apparently I shoulda used lea.
+int $0x13
 
 
 stop:
@@ -44,6 +46,13 @@ jmp stop
 
 welcome:
 .string "Welcome to xv6@UIC. Press any key to continue"
+
+dap:
+.byte 0x10, 0x0
+.word 125 # The number of blocks to read
+.long 0xa0000000 # Try splitting this.
+.quad 0x1
+
 
 .org 0x1fe
 .word 0xAA55
