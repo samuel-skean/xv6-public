@@ -235,10 +235,10 @@ bootsplash.img: bootsplash.S
 	dd if=cover.raw of=bootsplash.img bs=512 seek=1 # seek is in terms of block sizes
 
 qemu-bootsplash: bootsplash.img
-	$(QEMU) bootsplash.img
+	qemu-system-i386 bootsplash.img
 
 qemu-bootsplash-gdb: bootsplash.img
 	@echo "*** Now run 'gdb'." 1>&2
-	$(QEMU) bootsplash.img -S $(QEMUGDB)
+	qemu-system-i386 bootsplash.img -s -S
 	
 .PHONY: dist-test dist
