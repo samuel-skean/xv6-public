@@ -47,10 +47,12 @@ jmp stop
 welcome:
 .string "Welcome to xv6@UIC. Press any key to continue"
 
-dap:
-.byte 0x10, 0x0
+dap: # Disk Access Packet
+.byte 0x10 # Size of this packet
+.byte 0x0 # Reserved, should be 0
 .word 125 # The number of blocks to read
-.long 0xa0000000 # Try splitting this.
+.long 0xa0000000 # Segment:offset of graphics memory
+# This is always the graphics memory when using this graphics mode.
 .quad 0x1
 
 
