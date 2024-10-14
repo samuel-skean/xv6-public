@@ -17,7 +17,14 @@
 #include "proc.h"
 #include "x86.h"
 
+#define TOP_BIT_SET 0b1000000000000000000000000000000000000000000000000000000000000000
+
+
 static void consputc(int);
+
+static void color_consputc(int, unsigned char color);
+
+static unsigned char general_color = 0x7; // gray on black
 
 static int panicked = 0;
 
@@ -149,7 +156,7 @@ panic(char *s)
 static ushort *crt = (ushort*)P2V(0xb8000);  // CGA memory
 
   static void
-cgaputc(int c)
+cgaputc(int c, unsigned char color)
 {
   int pos;
 
@@ -164,7 +171,7 @@ cgaputc(int c)
   else if (c == BACKSPACE) {
     if (pos > 0) --pos;
   } else
-    crt[pos++] = (c&0xff) | 0x0700;  // gray on black
+    crt[pos++] = (c&0xff) | (color << 8);  // caller-supplied color
 
   if ((pos/80) >= 24){  // Scroll up.
     memmove(crt, crt+80, sizeof(crt[0])*23*80);
@@ -182,6 +189,12 @@ cgaputc(int c)
   void
 consputc(int c)
 {
+  color_consputc(c, general_color);
+}
+
+  void
+color_consputc(int c, unsigned char color)
+{
   if (panicked) {
     cli();
     for(;;)
@@ -192,7 +205,7 @@ consputc(int c)
     uartputc('\b'); uartputc(' '); uartputc('\b');
   } else
     uartputc(c);
-  cgaputc(c);
+  cgaputc(c, color);
 }
 
 #define INPUT_BUF 128
@@ -288,8 +301,17 @@ consoleread(struct file *f, char *dst, int n)
 int
 consoleioctl(struct file *f, int param, int value)
 {
-  cprintf("Got unknown console ioctl request. %d = %d\n",param,value);
-  return -1;
+  switch (param){
+  case 0:
+    f->dev_payload = (void*) (TOP_BIT_SET | (unsigned char) (value&0xff));
+    break;
+  case 1:
+    general_color = (unsigned char) (value&0xff);
+    break;
+  default:
+    cprintf("Got unknown console ioctl request. %d = %d\n",param,value);
+    return -1;
+  }
 }
 
 int
@@ -298,8 +320,13 @@ consolewrite(struct file *f, char *buf, int n)
   int i;
 
   acquire(&cons.lock);
+  // If the top bit isn't set:
+  if (!(((uint64) f->dev_payload) & TOP_BIT_SET)) {
+    // Set it, and set the payload to 0x7.
+    f->dev_payload = (void*) (TOP_BIT_SET | (unsigned char) 0x7);
+  }
   for(i = 0; i < n; i++)
-    consputc(buf[i] & 0xff);
+    color_consputc(buf[i] & 0xff, (unsigned char) ((uint64) f->dev_payload)&0xff);
   release(&cons.lock);
 
   return n;
