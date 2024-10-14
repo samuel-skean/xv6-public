@@ -13,10 +13,16 @@
 #include "vga.h"
 #define CRTPORT 0x3d4
 
-static uint32 pixel_index = 0;
+struct palette {
+  // Opposite of expected order because little-endian.
+  uchar b; uchar g; uchar r;
+  uchar palette_num;
+};
+
 static unsigned char *const video_memory = (unsigned char*) P2V(0xA0000);
 static ushort *const text_memory = (ushort*) P2V(0xb8000);
-static ushort text_memory_backup[80*25];
+static ushort text_memory_backup[80*25] = {};
+static uint32 pixel_index = 0;
 static int text_cursor_pos_backup;
 
 static void displayputp(unsigned char p) {
@@ -50,7 +56,9 @@ int displayioctl(struct file *f, int param, int value) {
     }
     break;
   case 2:
-    return -1; // TODO: Support palette changes.
+    struct palette p = *((struct palette*) &value);
+    vgaSetPalette(p.palette_num, p.r, p.g, p.b);
+    return 0;
     break;
   default:
     cprintf("Got unknown console ioctl request. %d = %d\n",param,value);
