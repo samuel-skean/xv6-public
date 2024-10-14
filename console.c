@@ -312,6 +312,7 @@ consoleioctl(struct file *f, int param, int value)
     cprintf("Got unknown console ioctl request. %d = %d\n",param,value);
     return -1;
   }
+  return 0;
 }
 
 int
