@@ -183,7 +183,7 @@ cgaputc(int c, unsigned char color)
   outb(CRTPORT+1, pos>>8);
   outb(CRTPORT, 15);
   outb(CRTPORT+1, pos);
-  crt[pos] = ' ' | 0x0700;
+  crt[pos] = ' ' | color;
 }
 
   void
