@@ -77,7 +77,7 @@ found:
 
   p->mmaptop = (char *) MMAPBASE;
   p->mmapcount = 0;
-  memset(&p->mmaps, 0xBAAABAAA, 10);
+  memset(&p->mmaps, 0xBA, 10); // Debugging, should be unused.
 
   return p;
 }
