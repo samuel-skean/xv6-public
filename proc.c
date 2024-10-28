@@ -73,7 +73,11 @@ found:
   memset(p->context, 0, sizeof *p->context);
   p->context->rip = (addr_t)forkret;
 
-  // TODO: hw4: initialize the mmap metadata for each new process
+  // COMPLETED: hw4: initialize the mmap metadata for each new process
+
+  p->mmaptop = (char *) MMAPBASE;
+  p->mmapcount = 0;
+  memset(&p->mmaps, 0xBAAABAAA, 10);
 
   return p;
 }

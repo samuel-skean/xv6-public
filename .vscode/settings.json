@@ -4,6 +4,13 @@
         "stat.h": "c",
         "user.h": "c",
         "assert.h": "c",
-        "unistd.h": "c"
+        "unistd.h": "c",
+        "fcntl.h": "c",
+        "file.h": "c",
+        "mmu.h": "c",
+        "defs.h": "c",
+        "x86.h": "c",
+        "proc.h": "c",
+        "spinlock.h": "c"
     }
 }
