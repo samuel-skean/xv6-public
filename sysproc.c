@@ -92,27 +92,33 @@ sys_uptime(void)
   return xticks;
 }
 
+#define MMAP_FAILED ((~0lu))
 static addr_t
-mmap_eager(struct file *f)
+mmap_eager(struct inode *ip)
 {
-  for (char *a = proc->mmaptop; a < proc->mmaptop + f->ip->size; a += PGSIZE) {
-    char *mem = kalloc();
-    if (mem == 0){
+  ilock(ip);
+  uint file_size = ip->size;
+  for (char *uva = proc->mmaptop; uva < proc->mmaptop + file_size; uva += PGSIZE) {
+    char *ka = kalloc();
+    if (ka == 0){
+      iunlock(ip);
       panic("Out of memory in mmap"); // TODO: Handle gracefully.
     }
-    memset(mem, 'H', PGSIZE);
-    if (mappages(proc->pgdir, a, PGSIZE, V2P(mem), PTE_W | PTE_U) < 0) {
+    if (readi(ip, ka, uva - proc->mmaptop, PGSIZE) == -1)
+      panic("Failed to read"); // TODO: Handle gracefully. TODO: What should I do about short reads? Are those possible?
+    if (mappages(proc->pgdir, uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
+      iunlock(ip);
       panic("Out of memory in mmap, specifically for the page tables."); // TODO: Handle gracefully.
     }
   }
+  iunlock(ip);
 
   addr_t address_of_map = (addr_t) proc->mmaptop;
-  proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + f->ip->size);
+  proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + file_size);
   // TODO: Why does this work even without reloading %cr3?
   return address_of_map;
 }
 
-#define MMAP_FAILED ((~0lu))
   addr_t
 sys_mmap(void)
 {
@@ -122,12 +128,15 @@ sys_mmap(void)
     return MMAP_FAILED;
   if (fd < 0 || fd > NOFILE || (f = proc->ofile[fd]) == 0x0) // Heavily inspired by argfd
     return MMAP_FAILED;
-  
+  if (f->readable == 0 || f->type != FD_INODE)
+    return MMAP_FAILED;
+
   switch (flags) {
-    case 0: return mmap_eager(f);
-    case 1: return mmap_eager(f); // TODO: Make this lazy.
+    case 0: return mmap_eager(f->ip);
+    case 1: return mmap_eager(f->ip); // TODO: Make this lazy.
     default: return MMAP_FAILED;
   }
+
 }
 
   int

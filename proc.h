@@ -64,11 +64,11 @@ struct proc {
 
   // mmap
   char* mmaptop;
-  int mmapcount; // number of mmaps recorded below
+  int lazymmapcount; // number of mmaps recorded below
   struct {
     int fd;
     addr_t start;
-  } mmaps[10];
+  } lazymmaps[10];
 };
 
 // Process memory is laid out contiguously, low addresses first:

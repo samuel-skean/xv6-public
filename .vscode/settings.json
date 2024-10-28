@@ -11,6 +11,8 @@
         "defs.h": "c",
         "x86.h": "c",
         "proc.h": "c",
-        "spinlock.h": "c"
+        "spinlock.h": "c",
+        "param.h": "c",
+        "traps.h": "c"
     }
 }

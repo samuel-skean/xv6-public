@@ -76,8 +76,8 @@ found:
   // COMPLETED: hw4: initialize the mmap metadata for each new process
 
   p->mmaptop = (char *) MMAPBASE;
-  p->mmapcount = 0;
-  memset(&p->mmaps, 0xBA, 10); // Debugging, should be unused.
+  p->lazymmapcount = 0;
+  memset(&p->lazymmaps, 0xBA, 10); // Debugging, should be unused.
 
   return p;
 }
