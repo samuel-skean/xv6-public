@@ -98,7 +98,7 @@ mmap_eager(struct inode *ip)
 {
   ilock(ip);
   uint file_size = ip->size;
-  for (char *uva = proc->mmaptop; uva < proc->mmaptop + file_size; uva += PGSIZE) {
+  for (addr_t uva = proc->mmaptop; uva < proc->mmaptop + file_size; uva += PGSIZE) {
     char *ka = kalloc();
     if (ka == 0){
       iunlock(ip);
@@ -108,15 +108,15 @@ mmap_eager(struct inode *ip)
       panic("Failed to read"); // TODO: Handle gracefully. TODO: What should I do about short reads? Are those possible?
       // I think the last read is very likely to be a short read, since the file
       // is unlikely to have a size exactly a multiple of PGSIZE.
-    if (mappages(proc->pgdir, uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
+    if (mappages(proc->pgdir, (void *) uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
       iunlock(ip);
       panic("Out of memory in mmap, specifically for the page tables."); // TODO: Handle gracefully.
     }
   }
   iunlock(ip);
 
-  addr_t address_of_map = (addr_t) proc->mmaptop;
-  proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + file_size);
+  addr_t address_of_map = proc->mmaptop;
+  proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
   // TODO: Why does this work even without reloading %cr3?
   return address_of_map;
 }
@@ -136,7 +136,7 @@ mmap_lazy(struct inode *ip, int fd) {
   proc->lazymmaps[proc->lazymmapcount].start = address_of_map;
   proc->lazymmapcount++;
 
-  proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + file_size);
+  proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
 
   // TODO: Why does this work even without reloading %cr3?
   return address_of_map;
@@ -200,7 +200,7 @@ handle_pagefault(addr_t va)
     return 0;
   }
   iunlock(f->ip);
-  if (mappages(proc->pgdir, uva_page_start, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
+  if (mappages(proc->pgdir, (void *) uva_page_start, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
     cprintf("Out of memory in mmap, specifically for the page tables.\n");
     return 0;
   }
