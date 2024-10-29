@@ -77,7 +77,7 @@ found:
 
   p->mmaptop = (char *) MMAPBASE;
   p->lazymmapcount = 0;
-  memset(&p->lazymmaps, 0xBA, 10); // Debugging, should be unused.
+  memset(&p->lazymmaps, 0xBA, sizeof(p->lazymmaps)); // Debugging, should be unused.
 
   return p;
 }
