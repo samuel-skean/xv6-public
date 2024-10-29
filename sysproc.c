@@ -106,6 +106,8 @@ mmap_eager(struct inode *ip)
     }
     if (readi(ip, ka, uva - proc->mmaptop, PGSIZE) == -1)
       panic("Failed to read"); // TODO: Handle gracefully. TODO: What should I do about short reads? Are those possible?
+      // I think the last read is very likely to be a short read, since the file
+      // is unlikely to have a size exactly a multiple of PGSIZE.
     if (mappages(proc->pgdir, uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
       iunlock(ip);
       panic("Out of memory in mmap, specifically for the page tables."); // TODO: Handle gracefully.
@@ -115,6 +117,27 @@ mmap_eager(struct inode *ip)
 
   addr_t address_of_map = (addr_t) proc->mmaptop;
   proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + file_size);
+  // TODO: Why does this work even without reloading %cr3?
+  return address_of_map;
+}
+
+static addr_t
+mmap_lazy(struct inode *ip, int fd) {
+  if (proc->lazymmapcount == 10){
+    return MMAP_FAILED;
+  }
+  ilock(ip);
+  uint file_size = ip->size;
+  iunlock(ip);
+
+  addr_t address_of_map = (addr_t) proc->mmaptop;
+
+  proc->lazymmaps[proc->lazymmapcount].fd = fd;
+  proc->lazymmaps[proc->lazymmapcount].start = address_of_map;
+  proc->lazymmapcount++;
+
+  proc->mmaptop = (char *) PGROUNDUP((addr_t) proc->mmaptop + file_size);
+
   // TODO: Why does this work even without reloading %cr3?
   return address_of_map;
 }
@@ -133,7 +156,7 @@ sys_mmap(void)
 
   switch (flags) {
     case 0: return mmap_eager(f->ip);
-    case 1: return mmap_eager(f->ip); // TODO: Make this lazy.
+    case 1: return mmap_lazy(f->ip, fd); // TODO: Make this lazy.
     default: return MMAP_FAILED;
   }
 
@@ -142,6 +165,46 @@ sys_mmap(void)
   int
 handle_pagefault(addr_t va)
 {
-  // TODO: your code here
-  return 0;
+  uint fd = NOFILE + 1;
+  struct file *f;
+  uint mmap_idx;
+  // Find the lazy mmap by going backwards through the list of lazymmaps:
+  for (mmap_idx = proc->lazymmapcount - 1; mmap_idx >= 0; mmap_idx--) {
+    if (va >= proc->lazymmaps[mmap_idx].start) {
+      fd = proc->lazymmaps[mmap_idx].fd;
+      break;
+    }
+  }
+
+  if (fd == NOFILE + 1) {
+    cprintf("No file mmapped at that address.\n");
+    return 0;
+  }
+  if ((f = proc->ofile[fd]) == 0x0) {
+    cprintf("mmapped file was closed while mmapped.\n");
+    return 0;
+  }
+
+  char *ka = kalloc();
+  if (ka == 0){
+    cprintf("Out of memory in mmap\n");
+    return 0;
+  }
+
+  ilock(f->ip);
+
+  addr_t uva_page_start = PGROUNDDOWN((addr_t) va);
+  if (readi(f->ip, ka, uva_page_start - proc->lazymmaps[mmap_idx].start, PGSIZE) == -1) {
+    cprintf("Failed to read\n"); // TODO: Handle short reads, or change comment.
+    iunlock(f->ip);
+    return 0;
+  }
+  iunlock(f->ip);
+  if (mappages(proc->pgdir, uva_page_start, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
+    cprintf("Out of memory in mmap, specifically for the page tables.\n");
+    return 0;
+  }
+  
+  // lcr3(v2p(proc->pgdir)); // TODO: Why isn't this necessary?
+  return 1;
 }

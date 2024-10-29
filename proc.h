@@ -66,7 +66,7 @@ struct proc {
   char* mmaptop;
   int lazymmapcount; // number of mmaps recorded below
   struct {
-    int fd;
+    uint fd;
     addr_t start;
   } lazymmaps[10];
 };
