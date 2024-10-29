@@ -165,6 +165,8 @@ sys_mmap(void)
   int
 handle_pagefault(addr_t va)
 {
+  if (va < MMAPBASE || va >= proc->mmaptop)
+    return 0; // Not an mmap.
   uint fd = NOFILE + 1;
   struct file *f;
   uint mmap_idx;
