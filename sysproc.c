@@ -117,7 +117,7 @@ mmap_eager(struct inode *ip)
 
   addr_t address_of_map = proc->mmaptop;
   proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
-  // TODO: Why does this work even without reloading %cr3?
+  lcr3(v2p(proc->pgdir)); // I don't think we need this, since we only *added* mappings, but let's do it just to be safe.
   return address_of_map;
 }
 
@@ -138,7 +138,6 @@ mmap_lazy(struct inode *ip, int fd) {
 
   proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
 
-  // TODO: Why does this work even without reloading %cr3?
   return address_of_map;
 }
 
@@ -207,6 +206,6 @@ handle_pagefault(addr_t va)
     return 0;
   }
   
-  // lcr3(v2p(proc->pgdir)); // TODO: Why isn't this necessary?
+  lcr3(v2p(proc->pgdir)); // I don't think we need this, since we only *added* mappings, but let's do it just to be safe.
   return 1;
 }
