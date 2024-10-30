@@ -155,7 +155,7 @@ sys_mmap(void)
 
   switch (flags) {
     case 0: return mmap_eager(f->ip);
-    case 1: return mmap_lazy(f->ip, fd); // TODO: Make this lazy.
+    case 1: return mmap_lazy(f->ip, fd);
     default: return MMAP_FAILED;
   }
 
