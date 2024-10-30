@@ -104,10 +104,11 @@ mmap_eager(struct inode *ip)
       iunlock(ip);
       panic("Out of memory in mmap"); // TODO: Handle gracefully.
     }
+    // The last read is likely to be a short read, since the file is unlikely
+    // to have a size exactly a multiple of PGSIZE. This is fine.
     if (readi(ip, ka, uva - proc->mmaptop, PGSIZE) == -1)
-      panic("Failed to read"); // TODO: Handle gracefully. TODO: What should I do about short reads? Are those possible?
-      // I think the last read is very likely to be a short read, since the file
-      // is unlikely to have a size exactly a multiple of PGSIZE.
+      panic("Failed to read"); // TODO: Handle gracefully.
+      
     if (mappages(proc->pgdir, (void *) uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
       iunlock(ip);
       panic("Out of memory in mmap, specifically for the page tables."); // TODO: Handle gracefully.
@@ -195,8 +196,10 @@ handle_pagefault(addr_t va)
   ilock(f->ip);
 
   addr_t uva_page_start = PGROUNDDOWN((addr_t) va);
+  // The last read is likely to be a short read, since the file is unlikely
+  // to have a size exactly a multiple of PGSIZE. This is fine:
   if (readi(f->ip, ka, uva_page_start - proc->lazymmaps[mmap_idx].start, PGSIZE) == -1) {
-    cprintf("Failed to read\n"); // TODO: Handle short reads, or change comment.
+    cprintf("Failed to read\n");
     iunlock(f->ip);
     return 0;
   }
