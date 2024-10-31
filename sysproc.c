@@ -93,6 +93,24 @@ sys_uptime(void)
 }
 
 #define MMAP_FAILED ((~0lu))
+
+// user_page_start must be page-aligned. This could theoretically de-allocate
+// unnecessary parts of the page-mapping structure, but that's hard :(, so I'm not. Places
+// the physical address that was mapped to that page in *pa. That address is always page-aligned.
+// Returns -1 on failure, 0 on success.
+static int
+unmappage(pml4e_t *pml4, void *user_page_start, addr_t *pa) 
+{
+  pte_t *pte;
+  if ((pte = walkpgdir(pml4, user_page_start, 0)) == 0) {
+    return -1;
+  }
+  if (!(*pte & PTE_P))
+    panic("unmapped");
+  *pte &= ~PTE_P; // Unsets the PTE_P bit.
+  return *pte & ~PXMASK;
+}
+
 static addr_t
 mmap_eager(struct inode *ip)
 {
@@ -120,6 +138,9 @@ mmap_eager(struct inode *ip)
 
   lcr3(v2p(proc->pgdir)); // I don't think we need this, since we only *added* mappings, but let's do it just to be safe.
   return address_of_map;
+
+ bad:
+  
 }
 
 static addr_t
@@ -195,16 +216,16 @@ handle_pagefault(addr_t va)
 
   ilock(f->ip);
 
-  addr_t uva_page_start = PGROUNDDOWN((addr_t) va);
+  addr_t user_page_start = PGROUNDDOWN((addr_t) va);
   // The last read is likely to be a short read, since the file is unlikely
   // to have a size exactly a multiple of PGSIZE. This is fine:
-  if (readi(f->ip, ka, uva_page_start - proc->lazymmaps[mmap_idx].start, PGSIZE) == -1) {
+  if (readi(f->ip, ka, user_page_start - proc->lazymmaps[mmap_idx].start, PGSIZE) == -1) {
     cprintf("Failed to read\n");
     iunlock(f->ip);
     return 0;
   }
   iunlock(f->ip);
-  if (mappages(proc->pgdir, (void *) uva_page_start, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
+  if (mappages(proc->pgdir, (void *) user_page_start, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
     cprintf("Out of memory in mmap, specifically for the page tables.\n");
     return 0;
   }
