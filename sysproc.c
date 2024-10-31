@@ -98,26 +98,26 @@ mmap_eager(struct inode *ip)
 {
   ilock(ip);
   uint file_size = ip->size;
-  for (addr_t uva = proc->mmaptop; uva < proc->mmaptop + file_size; uva += PGSIZE) {
+  addr_t address_of_map = proc->mmaptop;
+  proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
+  for (addr_t uva = address_of_map; uva < address_of_map + file_size; uva += PGSIZE) {
     char *ka = kalloc();
     if (ka == 0){
       iunlock(ip);
-      panic("Out of memory in mmap"); // TODO: Handle gracefully.
+      return MMAP_FAILED;
     }
     // The last read is likely to be a short read, since the file is unlikely
     // to have a size exactly a multiple of PGSIZE. This is fine.
-    if (readi(ip, ka, uva - proc->mmaptop, PGSIZE) == -1)
-      panic("Failed to read"); // TODO: Handle gracefully.
+    if (readi(ip, ka, uva - address_of_map, PGSIZE) == -1)
+      panic("Failed to read");
       
     if (mappages(proc->pgdir, (void *) uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
       iunlock(ip);
-      panic("Out of memory in mmap, specifically for the page tables."); // TODO: Handle gracefully.
+      return MMAP_FAILED;
     }
   }
   iunlock(ip);
 
-  addr_t address_of_map = proc->mmaptop;
-  proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
   lcr3(v2p(proc->pgdir)); // I don't think we need this, since we only *added* mappings, but let's do it just to be safe.
   return address_of_map;
 }
