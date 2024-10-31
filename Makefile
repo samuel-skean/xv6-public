@@ -123,8 +123,8 @@ UPROGS= \
   _eager _lazy _bad _quiz-4-how-many-pages \
 #
 
-fs.img: mkfs README LARGE TWOMEG $(UPROGS)
-	./mkfs fs.img README LARGE TWOMEG $(UPROGS) # Why's this fail?
+fs.img: mkfs README LARGE $(UPROGS)
+	./mkfs fs.img README LARGE $(UPROGS)
 
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
