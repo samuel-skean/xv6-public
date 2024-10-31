@@ -120,11 +120,11 @@ mkfs: mkfs.c fs.h
 UPROGS= \
 	_cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
 	_rm _sh _stressfs _usertests _wc _zombie _time _poweroff \
-  _eager _lazy _bad \
+  _eager _lazy _bad _quiz-4-how-many-pages \
 #
 
-fs.img: mkfs README LARGE $(UPROGS)
-	./mkfs fs.img README LARGE $(UPROGS)
+fs.img: mkfs README LARGE TWOMEG $(UPROGS)
+	./mkfs fs.img README LARGE TWOMEG $(UPROGS) # Why's this fail?
 
 clean:
 	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
