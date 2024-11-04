@@ -120,14 +120,16 @@ mmap_eager(struct inode *ip)
   proc->mmaptop = PGROUNDUP(proc->mmaptop + file_size);
   for (addr_t uva = address_of_map; uva < address_of_map + file_size; uva += PGSIZE) {
     char *ka = kalloc();
-    if (ka == 0){
+    if (ka == 0) {
       iunlock(ip);
       return MMAP_FAILED;
     }
     // The last read is likely to be a short read, since the file is unlikely
     // to have a size exactly a multiple of PGSIZE. This is fine.
-    if (readi(ip, ka, uva - address_of_map, PGSIZE) == -1)
+    if (readi(ip, ka, uva - address_of_map, PGSIZE) == -1) {
+      iunlock(ip);
       panic("Failed to read");
+    }
       
     if (mappages(proc->pgdir, (void *) uva, PGSIZE, V2P(ka), PTE_W | PTE_U) < 0) {
       iunlock(ip);
@@ -166,6 +168,14 @@ mmap_lazy(struct inode *ip, int fd) {
   addr_t
 sys_mmap(void)
 {
+  // TODO: Ensure that we zero out the memory. The obvious way to do this is
+  // just to 0 out all memory we might give to the user. Thankfully walkpgdir 0s
+  // out the page mapping structure, otherwise there would be spurious mappings!
+  // (EEEEK!).
+
+  // A slightly better optimization would be to only 0 out the last page of the
+  // file, before reading it. That means we need to remove any mappings we made
+  // if we fail to map, but we should be doing that anyway.
   int fd, flags;
   struct file *f;
   if(argint(0,&fd) < 0 || argint(1,&flags) < 0)
