@@ -231,6 +231,29 @@ mappages(pde_t *pgdir, void *va, addr_t size, addr_t pa, int perm)
   return 0;
 }
 
+// Unmap pages for virtual addresses starting at va. va and size might not be
+// page-aligned.
+int
+unmappages(pde_t *pgdir, void *va, addr_t size)
+{
+  char *a, *last;
+  pte_t *pte;
+
+  a = (char*)PGROUNDDOWN((addr_t)va);
+  last = (char*)PGROUNDDOWN(((addr_t)va) + size - 1);
+  for(;;){
+    if((pte = walkpgdir(pgdir, a, 1)) == 0)
+      return -1;
+    if (!(*pte & PTE_P)) // Inverted condition relative to mappages
+      panic("unmapped");
+    *pte &= ~PTE_P; // Unset PTE_P
+    if(a == last)
+      break;
+    a += PGSIZE;
+  }
+  return 0;
+}
+
 // Load the initcode into address 0x1000 (4KB) of pgdir.
 // sz must be less than a page.
 void
@@ -472,7 +495,18 @@ copyout(pde_t *pgdir, addr_t va, void *p, uint64 len)
 void
 dedup(void *vstart, void *vend)
 {
-  cprintf("didn't dedup anything\n");
+  for (addr_t higher_uva = (addr_t) vstart; higher_uva < (addr_t) vend; higher_uva += PGSIZE) {
+    addr_t higher_frame = v2p(uva2ka(proc->pgdir, higher_uva));
+    update_checksum(higher_frame);
+    for (addr_t lower_uva = (addr_t) vstart; lower_uva < higher_uva; lower_uva += PGSIZE) {
+      addr_t lower_frame = v2p(uva2ka(proc->pgdir, lower_uva));
+      // lower_uva's checksum is already updated in a previous iteration of the outer loop.
+      if (higher_frame != lower_frame && frames_are_identical(higher_frame, lower_frame)) {
+        unmappages(proc->pgdir, higher_uva, PGSIZE);
+        mappages(proc->pgdir, higher_uva, PGSIZE, lower_frame, PTE_U);
+      }
+    }
+  }
   return;
 }
 
