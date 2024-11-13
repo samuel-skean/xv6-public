@@ -496,14 +496,19 @@ void
 dedup(void *vstart, void *vend)
 {
   for (addr_t higher_uva = (addr_t) vstart; higher_uva < (addr_t) vend; higher_uva += PGSIZE) {
-    addr_t higher_frame = v2p(uva2ka(proc->pgdir, higher_uva));
+    addr_t higher_kva = uva2ka(proc->pgdir, higher_uva);
+    if (higher_kva == 0) continue;
+    addr_t higher_frame = v2p(higher_kva);
     update_checksum(higher_frame);
     for (addr_t lower_uva = (addr_t) vstart; lower_uva < higher_uva; lower_uva += PGSIZE) {
-      addr_t lower_frame = v2p(uva2ka(proc->pgdir, lower_uva));
-      // lower_uva's checksum is already updated in a previous iteration of the outer loop.
+      addr_t lower_kva = uva2ka(proc->pgdir, lower_uva);
+      if (lower_kva == 0) continue;
+      addr_t lower_frame = v2p(lower_kva);
+      // lower_uva's checksum was already updated in a previous iteration of the outer loop.
       if (higher_frame != lower_frame && frames_are_identical(higher_frame, lower_frame)) {
         unmappages(proc->pgdir, higher_uva, PGSIZE);
-        mappages(proc->pgdir, higher_uva, PGSIZE, lower_frame, PTE_U);
+        mappages(proc->pgdir, higher_uva, PGSIZE, lower_frame, PTE_U); // Mapped in as read only.
+        krelease(higher_kva);
       }
     }
   }
