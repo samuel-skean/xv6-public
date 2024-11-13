@@ -8,7 +8,7 @@ UNAME_S := $(shell uname -s)
 UNAME_P := $(shell uname -p)
 ifeq ($(UNAME_S),Linux)
   ifeq ($(UNAME_P),aarch64)
-	TOOLPREFIX = x86_64-linux-gnu
+	TOOLPREFIX = x86_64-linux-gnu-
   else
   	# no prefix for Linux or WSL2
  	 TOOLPREFIX = 
@@ -118,7 +118,7 @@ mkfs: mkfs.c fs.h
 
 UPROGS= \
 	_cat _echo _forktest _grep _init _kill _ln _ls _mkdir \
-	_rm _sh _stressfs _usertests _wc _zombie \
+	_rm _sh _stressfs _usertests _wc _zombie _time _poweroff \
 	_dedup_writer _dedup_reader _cow_fork
 
 fs.img: mkfs README $(UPROGS)
@@ -156,7 +156,7 @@ QEMUGDB = $(shell if $(QEMU) -help | grep -q '^-gdb'; \
 ifndef CPUS
 CPUS := 2
 endif
-QEMUOPTS = -nic none -hda xv6.img -hdb fs.img -smp $(CPUS) -m 512 $(QEMUEXTRA)
+QEMUOPTS = -cpu qemu64,+rdtscp -nic none -hda xv6.img -hdb fs.img -smp sockets=$(CPUS) -m 512 $(QEMUEXTRA)
 
 qemu: fs.img xv6.img
 	$(QEMU) -serial mon:stdio $(QEMUOPTS)
