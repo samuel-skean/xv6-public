@@ -231,29 +231,6 @@ mappages(pde_t *pgdir, void *va, addr_t size, addr_t pa, int perm)
   return 0;
 }
 
-// Unmap pages for virtual addresses starting at va. va and size might not be
-// page-aligned.
-int
-unmappages(pde_t *pgdir, void *va, addr_t size)
-{
-  char *a, *last;
-  pte_t *pte;
-
-  a = (char*)PGROUNDDOWN((addr_t)va);
-  last = (char*)PGROUNDDOWN(((addr_t)va) + size - 1);
-  for(;;){
-    if((pte = walkpgdir(pgdir, a, 1)) == 0)
-      return -1;
-    if (!(*pte & PTE_P)) // Inverted condition relative to mappages
-      panic("unmapped");
-    *pte &= ~PTE_P; // Unset PTE_P
-    if(a == last)
-      break;
-    a += PGSIZE;
-  }
-  return 0;
-}
-
 // Load the initcode into address 0x1000 (4KB) of pgdir.
 // sz must be less than a page.
 void
@@ -506,16 +483,18 @@ dedup(void *vstart, void *vend)
       addr_t lower_frame = v2p(lower_kva);
       // lower_uva's checksum was already updated in a previous iteration of the outer loop.
       if (frames_are_identical(higher_frame, lower_frame)) {
-        unmappages(proc->pgdir, higher_uva, PGSIZE);
-        mappages(proc->pgdir, higher_uva, PGSIZE, lower_frame, PTE_U); // Mapped in as read only.
-        // TODO: Make *both* mappings of this page read-only, kretain the page
-        // that is mapped in multiple times. 
+
+        pte_t *lower_pte = walkpgdir(proc->pgdir, lower_uva, 0);
+        pte_t *higher_pte = walkpgdir(proc->pgdir, higher_uva, 0);
+        *higher_pte = *lower_pte = (*lower_pte & ~PTE_W) | PTE_COW;
 
         // No idea why krelease is necessary to make it so much *faster*. Maybe cache effects?
         krelease(higher_kva);
+        kretain(lower_kva);
       }
     }
   }
+  lcr3(v2p(proc->pgdir)); // Flush the TLB, we actually unmapped some things.
   return;
 }
 
