@@ -508,6 +508,10 @@ dedup(void *vstart, void *vend)
       if (higher_frame != lower_frame && frames_are_identical(higher_frame, lower_frame)) {
         unmappages(proc->pgdir, higher_uva, PGSIZE);
         mappages(proc->pgdir, higher_uva, PGSIZE, lower_frame, PTE_U); // Mapped in as read only.
+        // TODO: Make *both* mappings of this page read-only, kretain the page
+        // that is mapped in multiple times. 
+
+        // No idea why krelease is necessary to make it so much *faster*. Maybe cache effects?
         krelease(higher_kva);
       }
     }
