@@ -485,8 +485,8 @@ dedup(void *vstart, void *vend)
       if (frames_are_identical(higher_frame, lower_frame)) {
 
         pte_t *lower_pte = walkpgdir(proc->pgdir, lower_uva, 0);
-        pte_t *higher_pte = walkpgdir(proc->pgdir, higher_uva, 0);
-        *higher_pte = *lower_pte = (*lower_pte & ~PTE_W) | PTE_COW;
+        pte_t *higher_pte = walkpgdir(proc->pgdir, higher_uva, 0); 
+        *higher_pte =  *lower_pte = (*lower_pte & ~PTE_W) | PTE_COW;
 
         // No idea why krelease is necessary to make it so much *faster*. Maybe cache effects?
         krelease(higher_kva);
@@ -494,7 +494,7 @@ dedup(void *vstart, void *vend)
       }
     }
   }
-  lcr3(v2p(proc->pgdir)); // Flush the TLB, we actually unmapped some things.
+  lcr3(v2p(proc->pgdir)); // Flush the TLB, we actually changed some existing mappings.
   return;
 }
 
