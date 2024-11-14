@@ -472,20 +472,26 @@ copyout(pde_t *pgdir, addr_t va, void *p, uint64 len)
 void
 dedup(void *vstart, void *vend)
 {
+  // I'm using addr_t for user virtual addresses and physical addresses, and
+  // char * for kernel virtual addresses. My reasoning is that the C compiler
+  // doesn't know that either of the first things are valid memory addresses,
+  // but should know about the latter. But I seem to be fighting a losing battle
+  // for user virtual addresses, which I think invokes any UB I might otherwise
+  // avoid.
   for (addr_t higher_uva = (addr_t) vstart; higher_uva < (addr_t) vend; higher_uva += PGSIZE) {
-    addr_t higher_kva = uva2ka(proc->pgdir, higher_uva);
+    void *higher_kva = uva2ka(proc->pgdir, (char *) higher_uva);
     if (higher_kva == 0) continue;
     addr_t higher_frame = v2p(higher_kva);
     update_checksum(higher_frame);
     for (addr_t lower_uva = (addr_t) vstart; lower_uva < higher_uva; lower_uva += PGSIZE) {
-      addr_t lower_kva = uva2ka(proc->pgdir, lower_uva);
+      void *lower_kva = uva2ka(proc->pgdir, (char *) lower_uva);
       if (lower_kva == 0) continue;
       addr_t lower_frame = v2p(lower_kva);
       // lower_uva's checksum was already updated in a previous iteration of the outer loop.
       if (frames_are_identical(higher_frame, lower_frame)) {
 
-        pte_t *lower_pte = walkpgdir(proc->pgdir, lower_uva, 0);
-        pte_t *higher_pte = walkpgdir(proc->pgdir, higher_uva, 0); 
+        pte_t *lower_pte = walkpgdir(proc->pgdir, (char *) lower_uva, 0);
+        pte_t *higher_pte = walkpgdir(proc->pgdir, (char *) higher_uva, 0); 
         *higher_pte =  *lower_pte = (*lower_pte & ~PTE_W) | PTE_COW;
 
         // No idea why krelease is necessary to make it so much *faster*. Maybe cache effects?
