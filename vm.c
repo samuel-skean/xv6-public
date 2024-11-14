@@ -491,7 +491,11 @@ dedup(void *vstart, void *vend)
       if (lower_kva == 0) continue;
       addr_t lower_frame = v2p(lower_kva);
       // lower_uva's checksum was already updated in a previous iteration of the outer loop.
-      if (frames_are_identical(higher_frame, lower_frame)) {
+
+      // TODO: I believe checking if they're literally the same frame skips the
+      // expensive walking of the page directory, but it's still not clear to me
+      // why it's *so* much faster.
+      if (lower_frame != higher_frame && frames_are_identical(higher_frame, lower_frame)) {
 
         pte_t *lower_pte = walkpgdir(proc->pgdir, (char *) lower_uva, 0);
         pte_t *higher_pte = walkpgdir(proc->pgdir, (char *) higher_uva, 0); 
