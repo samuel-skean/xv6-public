@@ -192,7 +192,7 @@ void            switchkvm(void);
 int             copyout(pde_t*, addr_t, void*, uint64);
 void            clearpteu(pde_t *pgdir, char *uva);
 void            dedup(void *vstart, void *vend);
-int             copyonwrite(char* v);
+int             copyonwrite(addr_t v);
 
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
