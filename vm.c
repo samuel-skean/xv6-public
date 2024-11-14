@@ -479,8 +479,9 @@ dedup(void *vstart, void *vend)
   // for user virtual addresses, which I think invokes any UB I might otherwise
   // avoid.
 
-  // For consistency, I really shouldn't be using uva2ka here. It's also
+  // TODO: For consistency, I really shouldn't be using uva2ka here. It's also
   // definitely slowing me down.
+  // TODO: Definitely always skip frames currently marked PTE_COW. Thanks Harshit!
   for (addr_t higher_uva = (addr_t) vstart; higher_uva < (addr_t) vend; higher_uva += PGSIZE) {
     void *higher_kva = uva2ka(proc->pgdir, (char *) higher_uva);
     if (higher_kva == 0) continue;
