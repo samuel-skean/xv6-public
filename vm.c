@@ -478,6 +478,9 @@ dedup(void *vstart, void *vend)
   // but should know about the latter. But I seem to be fighting a losing battle
   // for user virtual addresses, which I think invokes any UB I might otherwise
   // avoid.
+
+  // For consistency, I really shouldn't be using uva2ka here. It's also
+  // definitely slowing me down.
   for (addr_t higher_uva = (addr_t) vstart; higher_uva < (addr_t) vend; higher_uva += PGSIZE) {
     void *higher_kva = uva2ka(proc->pgdir, (char *) higher_uva);
     if (higher_kva == 0) continue;
@@ -509,6 +512,15 @@ dedup(void *vstart, void *vend)
 int
 copyonwrite(addr_t uva)
 {
-  cprintf("didn't copyonwrite anything\n");
-  return 0;
+  pte_t* pte = walkpgdir(proc->pgdir, (void *) uva, 0);
+  if (pte == 0 || !((*pte & PTE_COW) && (*pte & PTE_U) && (*pte & PTE_P))) {
+    return 0;
+  }
+  void * new_page = kalloc();
+  if (new_page == 0) return 0;
+  memmove(new_page, PGROUNDDOWN(uva), PGSIZE);
+  krelease((char*)P2V(PTE_ADDR(*pte)));
+  *pte = v2p(new_page) | PTE_U | PTE_W | PTE_P;
+  lcr3(v2p(proc->pgdir));
+  return 1;
 }
